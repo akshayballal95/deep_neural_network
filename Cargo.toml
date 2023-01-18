@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 ndarray = "0.15.6"
+csv = "1.1.6"
+polars = {version = "0.26.1", features = ["ndarray"]}
