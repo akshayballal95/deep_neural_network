@@ -4,7 +4,7 @@ use std::f32::consts::E;
 use crate::dnn::ActivationCache;
 
 fn relu(z:f32)->f32{
-    if z>0.0{
+    if z>=0.0{
         z
     }
     else {
@@ -13,7 +13,7 @@ fn relu(z:f32)->f32{
 }
 
 fn relu_prime(z:f32)->f32{
-    if z>0.0{
+    if z>=0.0{
         1.0
     }
     else {
@@ -22,7 +22,7 @@ fn relu_prime(z:f32)->f32{
 }
 
 fn sigmoid(z:f32)->f32{
-    1.0/(1.0+E.powf(z))
+    1.0/(1.0+E.powf(-z))
 }
 
 fn sigmoid_prime(z:f32)->f32{

@@ -33,50 +33,46 @@ fn linear_forward(a: &Array2<f32>, w: &Array2<f32>, b: &Array2<f32>) -> (Array2<
     return (z, cache);
 }
 
-fn linear_backward(dz: &Array2<f32>,linear_cache:LinearCache ) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
+fn linear_backward(
+    dz: &Array2<f32>,
+    linear_cache: LinearCache,
+) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
     let (a_prev, w, b) = (linear_cache.a, linear_cache.w, linear_cache.b);
     let m = a_prev.shape()[1] as f32;
-    
-
-    let dw = (1.0/m)*(dz.dot(&a_prev.reversed_axes()));
-    let db_vec = dz.sum_axis(Axis(1)).to_vec();
-    let db=Array2::from_shape_vec((db_vec.len(),1),db_vec).unwrap();
+    let dw = (1.0 / m) * (dz.dot(&a_prev.reversed_axes()));
+    let db_vec = ((1.0/m)*dz.sum_axis(Axis(1))).to_vec();
+    let db = Array2::from_shape_vec((db_vec.len(), 1), db_vec).unwrap();
     let da_prev = w.reversed_axes().dot(dz);
 
     return (da_prev, dw, db);
 }
 
-fn linear_backward_activation(da: &Array2<f32>,cache:(LinearCache, ActivationCache), activation: &str ) -> Result<(Array2<f32>, Array2<f32>, Array2<f32>),String> {
-
-
-
-    let (linear_cache, activation_cache)=cache;
-    if activation == "relu"{
-       let dz = da * relu_backward(activation_cache.z);
-
-       let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
-       Ok((da_prev, dw, db))
-    }
-    else if activation == "sigmoid"{
-        let dz = da * sigmoid_backward(activation_cache.z);
- 
+fn linear_backward_activation(
+    da: &Array2<f32>,
+    cache: (LinearCache, ActivationCache),
+    activation: &str,
+) -> Result<(Array2<f32>, Array2<f32>, Array2<f32>), String> {
+    let (linear_cache, activation_cache) = cache;
+    if activation == "relu" {
+        let dz = da * relu_backward(activation_cache.z);
         let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
         Ok((da_prev, dw, db))
-     }
+    } else if activation == "sigmoid" {
+        let dz = da * sigmoid_backward(activation_cache.z);
 
-     else{
+        let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
+        Ok((da_prev, dw, db))
+    } else {
         Err("wrong activation".to_string())
-     }
-     
-
+    }
 }
 
 trait Log {
     fn log(&self) -> Array2<f32>;
 }
 
-impl Log for Array2<f32>{
-    fn log(&self) -> Array2<f32>{
+impl Log for Array2<f32> {
+    fn log(&self) -> Array2<f32> {
         self.map(|x| x.ln())
     }
 }
@@ -119,7 +115,7 @@ impl DeepNeuralNetwork {
 
         // Start from 1 because the 0th layer is input layer
         for l in 1..number_of_layers {
-            // Create a list of (layer_dims[l] * self.layer_dims[l-1]) integers and 
+            // Create a list of (layer_dims[l] * self.layer_dims[l-1]) integers and
             // multiply each with a random float
             let w: Vec<f32> = (0..self.layer_dims[l] * self.layer_dims[l - 1])
                 .map(|_| rng.gen_range(0.0..1.0) * 0.01)
@@ -149,15 +145,15 @@ impl DeepNeuralNetwork {
     ///  # Returns
     ///  * tuple `(al, caches)`
     ///  * `al` - last activation layer of shape (num_of_hidden_units_in_last, num_of_examples)
-    ///  * `caches` - Tuple of (LinearCache, ActivationCache) - LinearCache contains `a`, `w`, `b` and ActivationCache contains `z` 
+    ///  * `caches` - Tuple of (LinearCache, ActivationCache) - LinearCache contains `a`, `w`, `b` and ActivationCache contains `z`
     ///
     pub fn l_model_forward(
         &self,
-        x: Array2<f32>,
-        parameters: HashMap<String, Array2<f32>>,
+        x: &Array2<f32>,
+        parameters: &HashMap<String, Array2<f32>>,
     ) -> (Array2<f32>, HashMap<String, (LinearCache, ActivationCache)>) {
         let number_of_layers = self.layer_dims.len() - 1;
-        let mut a = x;
+        let mut a = x.clone();
         let mut caches = HashMap::new();
 
         for l in 1..number_of_layers {
@@ -168,8 +164,10 @@ impl DeepNeuralNetwork {
             let w = &parameters[&weight_string];
             let b = &parameters[&bias_string];
 
-            a = linear_forward_activation(&a_prev, w, b, "relu").unwrap().0;
-            let cache = linear_forward_activation(&a_prev, w, b, "relu").unwrap().1;
+            let (a_temp, cache_temp ) = linear_forward_activation(&a_prev, w, b, "relu").unwrap();
+
+            a = a_temp;
+            let cache = cache_temp;
 
             caches.insert(l.to_string(), cache);
         }
@@ -186,23 +184,30 @@ impl DeepNeuralNetwork {
         (al, caches)
     }
 
-    pub fn cost(&self, al: &Array2<f32> , y: &Array2<f32> ) -> f32 {
-        
+    pub fn cost(&self, al: &Array2<f32>, y: &Array2<f32>) -> f32 {
         let m = y.shape()[1] as f32;
-        let cost = -(1.0/m)*(y.dot(&al.clone().reversed_axes().log()) + (1.0-y).dot(&(1.0-al).reversed_axes().log()));
+        let cost = -(1.0 / m)
+            * (y.dot(&al.clone().reversed_axes().log())
+                + (1.0 - y).dot(&(1.0 - al).reversed_axes().log()));
 
         return cost.sum();
     }
 
-    pub fn l_model_backward(&self, al:&Array2<f32>, y:&Array2<f32>, caches:HashMap<String, (LinearCache, ActivationCache)>)->HashMap<String, Array2<f32>>{
-        
-        let mut grads =  HashMap::new();
-        let num_of_layers = self.layer_dims.len()-1;
+    pub fn l_model_backward(
+        &self,
+        al: &Array2<f32>,
+        y: &Array2<f32>,
+        caches: HashMap<String, (LinearCache, ActivationCache)>,
+    ) -> HashMap<String, Array2<f32>> {
+        let mut grads = HashMap::new();
+        let num_of_layers = self.layer_dims.len() - 1;
 
-        let dal = -(y.div(al) - (1.0-y).div(1.0-al));
-
+        let dal = -(y.div(al) - (1.0 - y).div(1.0 - al));
+        // println!("al {:?}",al);
+        // println!("dal {:?}",dal);
         let current_cache = caches[&num_of_layers.to_string()].clone();
-        let (mut da_prev, mut dw, mut db) = linear_backward_activation(&dal, current_cache, "sigmoid").unwrap();
+        let (mut da_prev, mut dw, mut db) =
+            linear_backward_activation(&dal, current_cache, "sigmoid").unwrap();
 
         let weight_string = ["dW", &num_of_layers.to_string()].join("").to_string();
         let bias_string = ["db", &num_of_layers.to_string()].join("").to_string();
@@ -212,22 +217,42 @@ impl DeepNeuralNetwork {
         grads.insert(bias_string, db);
         grads.insert(activation_string, da_prev.clone());
 
-        for l in (1..num_of_layers).rev(){
+        for l in (1..num_of_layers).rev() {
             let current_cache = caches[&l.to_string()].clone();
-            (da_prev, dw, db) = linear_backward_activation(&da_prev, current_cache, "sigmoid").unwrap();
-    
+            (da_prev, dw, db) =
+                linear_backward_activation(&da_prev, current_cache, "relu").unwrap();
+
             let weight_string = ["dW", &l.to_string()].join("").to_string();
             let bias_string = ["db", &l.to_string()].join("").to_string();
             let activation_string = ["dA", &l.to_string()].join("").to_string();
-    
+
             grads.insert(weight_string, dw);
             grads.insert(bias_string, db);
             grads.insert(activation_string, da_prev.clone());
         }
 
-    grads
-
+        grads
     }
 
-    pub fn update_parameters(self) {}
+    pub fn update_parameters(
+        &self,
+        mut parameters: HashMap<String, Array2<f32>>,
+        grads: HashMap<String, Array2<f32>>,
+        learning_rate: f32,
+    ) -> HashMap<String, Array2<f32>>{
+        let num_of_layers = self.layer_dims.len() - 1;
+        for l in 1..num_of_layers + 1 {
+            let weight_string_grad = ["dW", &l.to_string()].join("").to_string();
+            let bias_string_grad = ["db", &l.to_string()].join("").to_string();
+            let weight_string = ["W", &l.to_string()].join("").to_string();
+            let bias_string = ["b", &l.to_string()].join("").to_string();
+
+            *parameters.get_mut(&weight_string).unwrap() = parameters[&weight_string].clone()
+                - learning_rate * grads[&weight_string_grad].clone();
+            *parameters.get_mut(&bias_string).unwrap() =
+                parameters[&bias_string].clone() - learning_rate * grads[&bias_string_grad].clone();
+        }
+        parameters
+    }
+    
 }
