@@ -1,6 +1,6 @@
 use ndarray::prelude::*;
 use rand::Rng;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Div};
 
 use crate::utils::*;
 #[derive(Clone, Debug)]
@@ -10,7 +10,7 @@ pub struct LinearCache {
     pub b: Array2<f32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ActivationCache {
     pub z: Array2<f32>,
 }
@@ -31,6 +31,44 @@ fn linear_forward(a: &Array2<f32>, w: &Array2<f32>, b: &Array2<f32>) -> (Array2<
     };
 
     return (z, cache);
+}
+
+fn linear_backward(dz: &Array2<f32>,linear_cache:LinearCache ) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
+    let (a_prev, w, b) = (linear_cache.a, linear_cache.w, linear_cache.b);
+    let m = a_prev.shape()[1] as f32;
+    
+
+    let dw = (1.0/m)*(dz.dot(&a_prev.reversed_axes()));
+    let db_vec = dz.sum_axis(Axis(1)).to_vec();
+    let db=Array2::from_shape_vec((db_vec.len(),1),db_vec).unwrap();
+    let da_prev = w.reversed_axes().dot(dz);
+
+    return (da_prev, dw, db);
+}
+
+fn linear_backward_activation(da: &Array2<f32>,cache:(LinearCache, ActivationCache), activation: &str ) -> Result<(Array2<f32>, Array2<f32>, Array2<f32>),String> {
+
+
+
+    let (linear_cache, activation_cache)=cache;
+    if activation == "relu"{
+       let dz = da * relu_backward(activation_cache.z);
+
+       let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
+       Ok((da_prev, dw, db))
+    }
+    else if activation == "sigmoid"{
+        let dz = da * sigmoid_backward(activation_cache.z);
+ 
+        let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
+        Ok((da_prev, dw, db))
+     }
+
+     else{
+        Err("wrong activation".to_string())
+     }
+     
+
 }
 
 trait Log {
@@ -156,9 +194,40 @@ impl DeepNeuralNetwork {
         return cost.sum();
     }
 
-    pub fn backward_propogation(self) {
-        //TODO
+    pub fn l_model_backward(&self, al:&Array2<f32>, y:&Array2<f32>, caches:HashMap<String, (LinearCache, ActivationCache)>)->HashMap<String, Array2<f32>>{
+        
+        let mut grads =  HashMap::new();
+        let num_of_layers = self.layer_dims.len()-1;
+
+        let dal = -(y.div(al) - (1.0-y).div(1.0-al));
+
+        let current_cache = caches[&num_of_layers.to_string()].clone();
+        let (mut da_prev, mut dw, mut db) = linear_backward_activation(&dal, current_cache, "sigmoid").unwrap();
+
+        let weight_string = ["dW", &num_of_layers.to_string()].join("").to_string();
+        let bias_string = ["db", &num_of_layers.to_string()].join("").to_string();
+        let activation_string = ["dA", &num_of_layers.to_string()].join("").to_string();
+
+        grads.insert(weight_string, dw);
+        grads.insert(bias_string, db);
+        grads.insert(activation_string, da_prev.clone());
+
+        for l in (1..num_of_layers).rev(){
+            let current_cache = caches[&l.to_string()].clone();
+            (da_prev, dw, db) = linear_backward_activation(&da_prev, current_cache, "sigmoid").unwrap();
+    
+            let weight_string = ["dW", &l.to_string()].join("").to_string();
+            let bias_string = ["db", &l.to_string()].join("").to_string();
+            let activation_string = ["dA", &l.to_string()].join("").to_string();
+    
+            grads.insert(weight_string, dw);
+            grads.insert(bias_string, db);
+            grads.insert(activation_string, da_prev.clone());
+        }
+
+    grads
+
     }
 
-    pub fn upgrade_gradients(self) {}
+    pub fn update_parameters(self) {}
 }

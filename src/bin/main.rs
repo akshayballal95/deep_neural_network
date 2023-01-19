@@ -10,19 +10,11 @@ fn main() {
     };
     let parameters = network.initialize_parameters();
 
-    let data = load_data("datasets/training_set.csv").unwrap();
-    let x_train_data = data.drop("y").unwrap();
-    let y_train_data = data.select(["y"]).unwrap();
+    let (x_train_data, y_train_data) = load_data_as_dataframe("datasets/training_set.csv");
 
-    let x_train_data_array = x_train_data
-        .to_ndarray::<Float32Type>()
-        .unwrap()
-        .reversed_axes();
 
-    let y_train_data_array = y_train_data
-        .to_ndarray::<Float32Type>()
-        .unwrap()
-        .reversed_axes();
+    let x_train_data_array = array_from_dataframe(&x_train_data);
+    let y_train_data_array = array_from_dataframe(&y_train_data);
 
     let (al, caches) = network.l_model_forward(
         x_train_data_array,
@@ -30,5 +22,9 @@ fn main() {
     );
     let cost = network.cost(&al, &y_train_data_array);
 
-    println!("{:?}", cost);
+    let grads = network.l_model_backward(&al, &y_train_data_array, caches);
+
+
+
+    println!("{:?}", grads);
 }
