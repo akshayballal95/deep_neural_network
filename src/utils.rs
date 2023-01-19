@@ -21,7 +21,7 @@ fn relu_prime(z:f32)->f32{
     }
 }
 
-fn sigmoid(z:f32)->f32{
+pub fn sigmoid(z:f32)->f32{
     1.0/(1.0+E.powf(-z))
 }
 

@@ -41,13 +41,17 @@ fn main() {
     let mut parameters = network.initialize_parameters();
 
     let (x_train_data, y_train_data) = load_data_as_dataframe("datasets/training_set.csv");
+    let (x_test_data, y_test_data) = load_data_as_dataframe("datasets/test_set.csv");
 
     let x_train_data_array = array_from_dataframe(&x_train_data) / 255.0;
-    let y_train_data_array = array_from_dataframe(&y_train_data) / 255.0;
+    let y_train_data_array = array_from_dataframe(&y_train_data) ;
+
+    let x_test_data_array = array_from_dataframe(&x_test_data) / 255.0;
+    let y_test_data_array = array_from_dataframe(&y_test_data);
 
     let mut costs: Vec<f32> = vec![];
 
-    let iterations:usize = 500;
+    let iterations:usize = 5;
 
     for i in 0..iterations{
         let (al, caches) = network.l_model_forward(
@@ -63,8 +67,14 @@ fn main() {
 
         costs.append(&mut vec![cost]);
         println!("Epoch : {}/{}    Cost: {:?}",i,iterations,cost);
+        // println!("{:?}", grads["dW4"]);
 
     }
 
-    plot(costs,iterations);
+    let score = network.predict(x_train_data_array, &y_train_data_array, parameters);
+
+    println!("{:?}",y_train_data_array.clone());
+
+
+    // plot(costs,iterations);
 }

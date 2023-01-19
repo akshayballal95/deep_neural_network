@@ -59,7 +59,6 @@ fn linear_backward_activation(
         Ok((da_prev, dw, db))
     } else if activation == "sigmoid" {
         let dz = da * sigmoid_backward(activation_cache.z);
-
         let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
         Ok((da_prev, dw, db))
     } else {
@@ -73,7 +72,7 @@ trait Log {
 
 impl Log for Array2<f32> {
     fn log(&self) -> Array2<f32> {
-        self.map(|x| x.ln())
+        self.map(|x| x.log(std::f32::consts::E))
     }
 }
 
@@ -202,9 +201,10 @@ impl DeepNeuralNetwork {
         let mut grads = HashMap::new();
         let num_of_layers = self.layer_dims.len() - 1;
 
-        let dal = -(y.div(al) - (1.0 - y).div(1.0 - al));
-        // println!("al {:?}",al);
-        // println!("dal {:?}",dal);
+        let dal = -(y/al - (1.0 - y)/(1.0 - al));
+
+        println!("{}",al);
+
         let current_cache = caches[&num_of_layers.to_string()].clone();
         let (mut da_prev, mut dw, mut db) =
             linear_backward_activation(&dal, current_cache, "sigmoid").unwrap();
@@ -253,6 +253,20 @@ impl DeepNeuralNetwork {
                 parameters[&bias_string].clone() - learning_rate * grads[&bias_string_grad].clone();
         }
         parameters
+    }
+
+    pub fn predict(&self,x_test_data:Array2<f32>, y_test_data:&Array2<f32> , parameters: HashMap<String, Array2<f32>>)->f32{
+        let (al,_) = self.l_model_forward(&x_test_data, &parameters);
+        
+
+        let y_hat = al.map(|x| x*(x>&0.5) as i32 as f32);
+        // println!("{:?}", al);
+
+        (y_hat-y_test_data).map(|x| x.abs()).sum()/y_test_data.len() as f32
+        
+       
+
+
     }
     
 }
