@@ -1,8 +1,8 @@
 use ndarray::prelude::*;
 use polars::prelude::*;
 use std::f32::consts::E;
-
 use crate::dnn::ActivationCache;
+
 fn relu(z:f32)->f32{
     if z>0.0{
         z

@@ -33,6 +33,16 @@ fn linear_forward(a: &Array2<f32>, w: &Array2<f32>, b: &Array2<f32>) -> (Array2<
     return (z, cache);
 }
 
+trait Log {
+    fn log(&self) -> Array2<f32>;
+}
+
+impl Log for Array2<f32>{
+    fn log(&self) -> Array2<f32>{
+        self.map(|x| x.ln())
+    }
+}
+
 fn linear_forward_activation(
     a_prev: &Array2<f32>,
     w: &Array2<f32>,
@@ -59,26 +69,28 @@ impl DeepNeuralNetwork {
     ///  * `layer_dims` - array (list) containing the dimensions of each layer in our network
     ///  # Returns
     /// * `parameters` -
-    ///     * hasshmap containing your parameters "W1", "b1", ..., \
+    ///     * hashmap containing your parameters "W1", "b1", ..., \
     ///     * "WL", "bL": Wl -- weight matrix of shape (layer_dims\[l], layer_dims\[l-1])\
     ///     * bl -- bias vector of shape (layer_dims\[l], 1)
     pub fn initialize_parameters(&self) -> HashMap<String, Array2<f32>> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::thread_rng(); // random number generator
 
-        let number_of_layers = self.layer_dims.len();
+        let number_of_layers = self.layer_dims.len(); // this includes input layer
 
         let mut parameters: HashMap<String, Array2<f32>> = HashMap::new();
 
+        // Start from 1 because the 0th layer is input layer
         for l in 1..number_of_layers {
-            
-            let w: Vec<f32> = (0..self.layer_dims[l] * self.layer_dims[l-1])
+            // Create a list of (layer_dims[l] * self.layer_dims[l-1]) integers and 
+            // multiply each with a random float
+            let w: Vec<f32> = (0..self.layer_dims[l] * self.layer_dims[l - 1])
                 .map(|_| rng.gen_range(0.0..1.0) * 0.01)
                 .collect();
             let w_matrix =
-                Array::from_shape_vec((self.layer_dims[l], self.layer_dims[l-1]), w).unwrap();
+                Array::from_shape_vec((self.layer_dims[l], self.layer_dims[l - 1]), w).unwrap();
 
             let b: Vec<f32> = vec![0.0; self.layer_dims[l]];
-            let b_vector = Array::from_shape_vec((self.layer_dims[l], 1),b).unwrap();
+            let b_vector = Array::from_shape_vec((self.layer_dims[l], 1), b).unwrap();
 
             let weight_string = ["W", &l.to_string()].join("").to_string();
             let biases_string = ["b", &l.to_string()].join("").to_string();
@@ -90,35 +102,36 @@ impl DeepNeuralNetwork {
         return parameters;
     }
 
+    ///  # Arguments
+    ///  * `x` - input data matrix of shape (num_of_input_features, num_of_examples)
+    ///  * `parameters` -
+    ///     * hashmap containing your parameters "W1", "b1", ..., \
+    ///     * "WL", "bL": Wl -- weight matrix of shape (layer_dims\[l], layer_dims\[l-1])\
+    ///     * bl -- bias vector of shape (layer_dims\[l], 1)
+    ///  # Returns
+    ///  * tuple `(al, caches)`
+    ///  * `al` - last activation layer of shape (num_of_hidden_units_in_last, num_of_examples)
+    ///  * `caches` - Tuple of (LinearCache, ActivationCache) - LinearCache contains `a`, `w`, `b` and ActivationCache contains `z` 
+    ///
     pub fn l_model_forward(
         &self,
         x: Array2<f32>,
         parameters: HashMap<String, Array2<f32>>,
     ) -> (Array2<f32>, HashMap<String, (LinearCache, ActivationCache)>) {
-
-        let number_of_layers = self.layer_dims.len()-1;
+        let number_of_layers = self.layer_dims.len() - 1;
         let mut a = x;
         let mut caches = HashMap::new();
-
 
         for l in 1..number_of_layers {
             let a_prev = a.clone();
             let weight_string = ["W", &l.to_string()].join("").to_string();
             let bias_string = ["b", &l.to_string()].join("").to_string();
 
-    
-
             let w = &parameters[&weight_string];
             let b = &parameters[&bias_string];
 
-
-
-            a = linear_forward_activation(&a_prev, w, b, "relu")
-                .unwrap()
-                .0;
-            let cache = linear_forward_activation(&a_prev, w, b, "relu")
-                .unwrap()
-                .1;
+            a = linear_forward_activation(&a_prev, w, b, "relu").unwrap().0;
+            let cache = linear_forward_activation(&a_prev, w, b, "relu").unwrap().1;
 
             caches.insert(l.to_string(), cache);
         }
@@ -135,8 +148,12 @@ impl DeepNeuralNetwork {
         (al, caches)
     }
 
-    pub fn cost(self) {
-        //TODO
+    pub fn cost(&self, al: &Array2<f32> , y: &Array2<f32> ) -> f32 {
+        
+        let m = y.shape()[1] as f32;
+        let cost = -(1.0/m)*(y.dot(&al.clone().reversed_axes().log()) + (1.0-y).dot(&(1.0-al).reversed_axes().log()));
+
+        return cost.sum();
     }
 
     pub fn backward_propogation(self) {
