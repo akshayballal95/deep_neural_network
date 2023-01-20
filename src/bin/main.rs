@@ -37,8 +37,6 @@ fn main() {
 
     // let parameters = load_weights_from_json();
 
-    // println!("{:?}", js);
-
     let score = network.predict(&x_test_data_array, &y_test_data_array, &parameters);
 
     println!("{}", score);
