@@ -1,6 +1,7 @@
 use ndarray::prelude::*;
-use rand::Rng;
-use std::{collections::HashMap, ops::Div};
+use rand::{Rng, prelude::Distribution, rngs::StdRng, SeedableRng};
+use std::{collections::HashMap};
+use rand::distributions::Standard;
 
 use crate::utils::*;
 #[derive(Clone, Debug)]
@@ -106,7 +107,10 @@ impl DeepNeuralNetwork {
     ///     * "WL", "bL": Wl -- weight matrix of shape (layer_dims\[l], layer_dims\[l-1])\
     ///     * bl -- bias vector of shape (layer_dims\[l], 1)
     pub fn initialize_parameters(&self) -> HashMap<String, Array2<f32>> {
+
+        // let between = Standard::from(-1..1);
         let mut rng = rand::thread_rng(); // random number generator
+    
 
         let number_of_layers = self.layer_dims.len(); // this includes input layer
 
@@ -116,8 +120,10 @@ impl DeepNeuralNetwork {
         for l in 1..number_of_layers {
             // Create a list of (layer_dims[l] * self.layer_dims[l-1]) integers and
             // multiply each with a random float
+            
+
             let w: Vec<f32> = (0..self.layer_dims[l] * self.layer_dims[l - 1])
-                .map(|_| rng.gen_range(0.0..1.0) * 0.01)
+                .map(|_| rng.gen_range(-1.0..1.0) *0.1 )
                 .collect();
             let w_matrix =
                 Array::from_shape_vec((self.layer_dims[l], self.layer_dims[l - 1]), w).unwrap();
@@ -203,8 +209,6 @@ impl DeepNeuralNetwork {
 
         let dal = -(y/al - (1.0 - y)/(1.0 - al));
 
-        println!("{}",al);
-
         let current_cache = caches[&num_of_layers.to_string()].clone();
         let (mut da_prev, mut dw, mut db) =
             linear_backward_activation(&dal, current_cache, "sigmoid").unwrap();
@@ -236,10 +240,11 @@ impl DeepNeuralNetwork {
 
     pub fn update_parameters(
         &self,
-        mut parameters: HashMap<String, Array2<f32>>,
+        params: HashMap<String, Array2<f32>>,
         grads: HashMap<String, Array2<f32>>,
         learning_rate: f32,
     ) -> HashMap<String, Array2<f32>>{
+        let mut parameters = params.clone();
         let num_of_layers = self.layer_dims.len() - 1;
         for l in 1..num_of_layers + 1 {
             let weight_string_grad = ["dW", &l.to_string()].join("").to_string();
@@ -248,9 +253,9 @@ impl DeepNeuralNetwork {
             let bias_string = ["b", &l.to_string()].join("").to_string();
 
             *parameters.get_mut(&weight_string).unwrap() = parameters[&weight_string].clone()
-                - learning_rate * grads[&weight_string_grad].clone();
+                - (learning_rate * grads[&weight_string_grad].clone());
             *parameters.get_mut(&bias_string).unwrap() =
-                parameters[&bias_string].clone() - learning_rate * grads[&bias_string_grad].clone();
+                parameters[&bias_string].clone() - (learning_rate * grads[&bias_string_grad].clone());
         }
         parameters
     }
@@ -260,8 +265,6 @@ impl DeepNeuralNetwork {
         
 
         let y_hat = al.map(|x| x*(x>&0.5) as i32 as f32);
-        // println!("{:?}", al);
-
         (y_hat-y_test_data).map(|x| x.abs()).sum()/y_test_data.len() as f32
         
        
