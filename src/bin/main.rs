@@ -29,15 +29,21 @@ fn main() {
 
     let parameters = network.initialize_parameters();
 
-    let iterations: usize = 500;
+    let iterations: usize = 2500;
 
-    let parameters = network.train_model(x_train_data_array, y_train_data_array, parameters, iterations, learning_rate);
+    let parameters = network.train_model(&x_train_data_array, &y_train_data_array, parameters, iterations, learning_rate);
 
     write_parameters_to_json_file(&parameters, "weights.json");
 
     // let parameters = load_weights_from_json();
 
+    
+    let score = network.predict(&x_train_data_array, &y_train_data_array, &parameters);
+
+    println!("Training Set Accuracy: {}%", score);
+    
+
     let score = network.predict(&x_test_data_array, &y_test_data_array, &parameters);
 
-    println!("{}", score);
+    println!("Test Set Accuracy: {}%", score);
 }

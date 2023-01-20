@@ -266,8 +266,8 @@ impl DeepNeuralNetwork {
 
     pub fn train_model(
         &self,
-        x_train_data: Array2<f32>,
-        y_train_data: Array2<f32>,
+        x_train_data: &Array2<f32>,
+        y_train_data: &Array2<f32>,
         mut parameters: HashMap<String, Array2<f32>>,
         iterations: usize,
         learning_rate: f32,
