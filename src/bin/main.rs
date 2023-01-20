@@ -31,11 +31,11 @@ fn main() {
 
     let iterations: usize = 2500;
 
-    let parameters = network.train_model(&x_train_data_array, &y_train_data_array, parameters, iterations, learning_rate);
+    // let parameters = network.train_model(&x_train_data_array, &y_train_data_array, parameters, iterations, learning_rate);
 
-    write_parameters_to_json_file(&parameters, "weights.json");
+    // write_parameters_to_json_file(&parameters, "weights.json");
 
-    // let parameters = load_weights_from_json();
+    let parameters = load_weights_from_json();
 
     
     let score = network.predict(&x_train_data_array, &y_train_data_array, &parameters);
