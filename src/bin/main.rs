@@ -32,7 +32,7 @@ fn plot(data: Vec<f32>, iters:usize) {
     root.present().unwrap();
 }
 fn main() {
-    let layer_dims: Vec<usize> = [12288, 20, 7, 5, 1].to_vec();
+    let layer_dims: Vec<usize> = vec![12288, 20, 7, 5, 1];
     let learning_rate: f32 = 0.0075;
     let network = DeepNeuralNetwork {
         layer_dims,
