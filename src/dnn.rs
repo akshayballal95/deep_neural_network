@@ -6,6 +6,19 @@ use std::collections::HashMap;
 
 
 use crate::utils::*;
+
+
+trait Log {
+    fn log(&self) -> Array2<f32>;
+}
+
+impl Log for Array2<f32> {
+    fn log(&self) -> Array2<f32> {
+        self.map(|x| x.log(std::f32::consts::E))
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub struct LinearCache {
     pub a: Array2<f32>,
@@ -69,15 +82,7 @@ fn linear_backward_activation(
     }
 }
 
-trait Log {
-    fn log(&self) -> Array2<f32>;
-}
 
-impl Log for Array2<f32> {
-    fn log(&self) -> Array2<f32> {
-        self.map(|x| x.log(std::f32::consts::E))
-    }
-}
 
 fn linear_forward_activation(
     a_prev: &Array2<f32>,
