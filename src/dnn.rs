@@ -260,12 +260,11 @@ impl DeepNeuralNetwork {
 
     pub fn predict(
         &self,
-        x_test_data: Array2<f32>,
-        al:Array2<f32>,
+        x_test_data: &Array2<f32>,
         y_test_data: &Array2<f32>,
-        // parameters: HashMap<String, Array2<f32>>,
+        parameters: &HashMap<String, Array2<f32>>,
     ) -> f32 {
-        // let (al, _) = self.l_model_forward(&x_test_data, &parameters);
+        let (al, _) = self.l_model_forward(&x_test_data, &parameters);
 
         let y_hat = al.map(|x| (x > &0.5) as i32 as f32);
         println!("{}", y_hat);
