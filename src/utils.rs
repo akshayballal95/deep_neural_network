@@ -36,12 +36,12 @@ pub fn sigmoid_activation(z: Array2<f32>) -> (Array2<f32>,ActivationCache){
     (z.map(|x| sigmoid(*x)), ActivationCache{z})
 }
 
-pub fn sigmoid_backward(z: Array2<f32>) -> Array2<f32>{
-   z.map(|x| sigmoid_prime(*x))
+pub fn sigmoid_backward(da: &Array2<f32>, z: Array2<f32>) -> Array2<f32>{
+   da * z.map(|x| sigmoid_prime(*x))
 }
 
-pub fn relu_backward(z: Array2<f32>) -> Array2<f32>{
-    z.map(|x| relu_prime(*x))
+pub fn relu_backward(da:&Array2<f32>, z: Array2<f32>) -> Array2<f32>{
+   da* z.map(|x| relu_prime(*x))
  }
 
 pub fn relu_activation(z: Array2<f32>)->(Array2<f32>,ActivationCache){

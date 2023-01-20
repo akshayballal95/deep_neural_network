@@ -55,11 +55,11 @@ fn linear_backward_activation(
 ) -> Result<(Array2<f32>, Array2<f32>, Array2<f32>), String> {
     let (linear_cache, activation_cache) = cache;
     if activation == "relu" {
-        let dz = da * relu_backward(activation_cache.z);
+        let dz = relu_backward(da, activation_cache.z);
         let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
         Ok((da_prev, dw, db))
     } else if activation == "sigmoid" {
-        let dz = da * sigmoid_backward(activation_cache.z);
+        let dz = sigmoid_backward(da, activation_cache.z);
         let (da_prev, dw, db) = linear_backward(&dz, linear_cache);
         Ok((da_prev, dw, db))
     } else {
