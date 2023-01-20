@@ -2,7 +2,8 @@ use crate::dnn::ActivationCache;
 use ndarray::prelude::*;
 use polars::{prelude::*, export::num::ToPrimitive};
 use serde_json::Value;
-use std::{collections::HashMap, f32::consts::E};
+use std::{collections::HashMap, f32::consts::E, fs::OpenOptions};
+use plotters::prelude::*;
 
 fn relu(z: f32) -> f32 {
     if z > 0.0 {
@@ -69,6 +70,18 @@ pub fn array_from_dataframe(dataframe: &DataFrame) -> Array2<f32> {
         .reversed_axes()
 }
 
+pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, filePath:&str){
+    let file = OpenOptions::new()
+    .create(true)
+    .write(true)
+    .truncate(true)
+    .open("weights.json")
+    .unwrap();
+
+    _ = serde_json::to_writer(file, parameters);
+
+}
+
 pub fn load_weights_from_json() ->HashMap<String, Array2<f32>>  {
     let text = std::fs::read_to_string("weights.json").unwrap();
     let weights_json: serde_json::Value = serde_json::from_str(&text).unwrap();
@@ -94,4 +107,38 @@ pub fn load_weights_from_json() ->HashMap<String, Array2<f32>>  {
 
     }
     parameters
+}
+
+
+
+pub fn plot(data: Vec<f32>, iters: usize) {
+    let root = BitMapBackend::new("0.png", (640, 480)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let mut chart = ChartBuilder::on(&root)
+        .caption("COST CURVE", ("sans-serif", 50).into_font())
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(30)
+        .build_cartesian_2d(0usize..iters, 0.0f32..1f32)
+        .unwrap();
+
+    chart.configure_mesh().draw().unwrap();
+
+    chart
+        .draw_series(LineSeries::new(
+            (0..iters).step_by(100).map(|x| (x, data[x / 100])),
+            &RED,
+        ))
+        .unwrap()
+        .label("COST")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+
+    chart
+        .configure_series_labels()
+        .background_style(&WHITE.mix(0.8))
+        .border_style(&BLACK)
+        .draw()
+        .unwrap();
+
+    root.present().unwrap();
 }

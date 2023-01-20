@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fs::OpenOptions};
 
 use deep_neural_network::{dnn::DeepNeuralNetwork, utils::*};
-use ndarray::{arr2, Array2};
-use plotters::prelude::*;
+use ndarray::{ Array2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -10,37 +9,7 @@ struct Parameter {
     parameter: HashMap<String, Array2<f32>>,
 }
 
-fn plot(data: Vec<f32>, iters: usize) {
-    let root = BitMapBackend::new("0.png", (640, 480)).into_drawing_area();
-    root.fill(&WHITE).unwrap();
-    let mut chart = ChartBuilder::on(&root)
-        .caption("COST CURVE", ("sans-serif", 50).into_font())
-        .margin(5)
-        .x_label_area_size(30)
-        .y_label_area_size(30)
-        .build_cartesian_2d(0usize..iters, 0.0f32..1f32)
-        .unwrap();
 
-    chart.configure_mesh().draw().unwrap();
-
-    chart
-        .draw_series(LineSeries::new(
-            (0..iters).step_by(100).map(|x| (x, data[x / 100])),
-            &RED,
-        ))
-        .unwrap()
-        .label("COST")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
-
-    chart
-        .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()
-        .unwrap();
-
-    root.present().unwrap();
-}
 fn main() {
     let layer_dims: Vec<usize> = vec![12288, 20, 7, 5, 1];
     let learning_rate: f32 = 0.0075;
@@ -48,8 +17,7 @@ fn main() {
         layer_dims,
         learning_rate,
     };
-    let mut parameters = network.initialize_parameters();
-
+   
     let (x_train_data, y_train_data) = load_data_as_dataframe("datasets/training_set.csv");
     let (x_test_data, y_test_data) = load_data_as_dataframe("datasets/test_set.csv");
 
@@ -59,40 +27,15 @@ fn main() {
     let x_test_data_array = array_from_dataframe(&x_test_data) / 255.0;
     let y_test_data_array = array_from_dataframe(&y_test_data);
 
-    let mut costs: Vec<f32> = vec![];
+    let parameters = network.initialize_parameters();
 
-    let iterations: usize = 2500;
-    let mut a: Array2<f32> = arr2(&[[1.0]]);
+    let iterations: usize = 500;
 
-    // for i in 0..iterations {
-    //     let (al, caches) = network.l_model_forward(&x_train_data_array, &parameters);
-    //     a = al.clone();
+    let parameters = network.train_model(x_train_data_array, y_train_data_array, parameters, iterations, learning_rate);
 
-    //     let cost = network.cost(&al, &y_train_data_array);
+    write_parameters_to_json_file(&parameters, "weights.json");
 
-    //     let grads = network.l_model_backward(&al, &y_train_data_array, caches);
-
-    //     parameters = network.update_parameters(parameters, grads.clone(), learning_rate);
-
-    //     if i % 100 == 0 {
-    //         costs.append(&mut vec![cost]);
-    //         // println!("{:?}",parameters);
-    //         println!("Epoch : {}/{}    Cost: {:?}", i, iterations, cost);
-    //     }
-    // }
-
-
-    // plot(costs, iterations);
-
-    // let file = OpenOptions::new()
-    //     .create(true)
-    //     .write(true)
-    //     .truncate(true)
-    //     .open("weights.json")
-    //     .unwrap();
-
-    // _ = serde_json::to_writer(file, &parameters);
-    let parameters = load_weights_from_json();
+    // let parameters = load_weights_from_json();
 
     // println!("{:?}", js);
 

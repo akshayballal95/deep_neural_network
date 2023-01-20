@@ -1,8 +1,9 @@
 use ndarray::prelude::*;
 use polars::export::num::integer::Roots;
 use rand::distributions::Uniform;
-use rand::{prelude::Distribution, rngs::StdRng, Rng, SeedableRng};
+use rand::{prelude::Distribution};
 use std::collections::HashMap;
+
 
 use crate::utils::*;
 #[derive(Clone, Debug)]
@@ -258,6 +259,36 @@ impl DeepNeuralNetwork {
         parameters
     }
 
+    pub fn train_model(
+        &self,
+        x_train_data: Array2<f32>,
+        y_train_data: Array2<f32>,
+        mut parameters: HashMap<String, Array2<f32>>,
+        iterations: usize,
+        learning_rate: f32,
+    )-> HashMap<String, Array2<f32>>{
+
+        let mut costs: Vec<f32> = vec![];
+
+        for i in 0..iterations {
+            let (al, caches) = self.l_model_forward(&x_train_data, &parameters);
+            let cost = self.cost(&al, &y_train_data);
+            let grads = self.l_model_backward(&al, &y_train_data, caches);
+            parameters = self.update_parameters(parameters, grads.clone(), learning_rate);
+
+            if i % 100 == 0 {
+                costs.append(&mut vec![cost]);
+                println!("Epoch : {}/{}    Cost: {:?}", i, iterations, cost);
+            }
+        }
+
+
+        plot(costs, iterations);
+
+        parameters
+
+    }
+
     pub fn predict(
         &self,
         x_test_data: &Array2<f32>,
@@ -268,8 +299,8 @@ impl DeepNeuralNetwork {
 
         let y_hat = al.map(|x| (x > &0.5) as i32 as f32);
         println!("{}", y_hat);
-        let error = (y_hat - y_test_data).map(|x| x.abs()).sum() / y_test_data.shape()[1] as f32 * 100.0;
+        let error =
+            (y_hat - y_test_data).map(|x| x.abs()).sum() / y_test_data.shape()[1] as f32 * 100.0;
         100.0 - error
-
     }
 }
