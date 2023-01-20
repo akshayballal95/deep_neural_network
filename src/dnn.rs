@@ -89,19 +89,19 @@ fn linear_forward_activation(
     w: &Array2<f32>,
     b: &Array2<f32>,
     activation: &str,
-) -> Option<(Array2<f32>, (LinearCache, ActivationCache))> {
+) -> Result<(Array2<f32>, (LinearCache, ActivationCache)), String> {
     if activation == "sigmoid" {
         let (z, linear_cache) = linear_forward(a_prev, w, b);
         let (a, activation_cache) = sigmoid_activation(z);
         let cache = (linear_cache, activation_cache);
-        Some((a, cache))
+        Ok((a, cache))
     } else if activation == "relu" {
         let (z, linear_cache) = linear_forward(a_prev, w, b);
         let (a, activation_cache) = relu_activation(z);
         let cache = (linear_cache, activation_cache);
-        Some((a, cache))
+        Ok((a, cache))
     } else {
-        None
+        Err("wrong activation string".to_string())
     }
 }
 
