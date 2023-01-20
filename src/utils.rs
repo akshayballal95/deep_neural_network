@@ -12,7 +12,7 @@ fn relu(z:f32)->f32{
     }
 }
 
-fn relu_prime(z:f32)->f32{
+pub fn relu_prime(z:f32)->f32{
     if z>0.0{
         1.0
     }
