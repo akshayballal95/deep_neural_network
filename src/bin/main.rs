@@ -38,12 +38,29 @@ fn main() {
     let parameters = load_weights_from_json();
 
     
-    let score = network.predict(&x_train_data_array, &y_train_data_array, &parameters);
+    let y_hat = network.predict(&x_train_data_array, &parameters);
 
-    println!("Training Set Accuracy: {}%", score);
+    println!("Training Set Accuracy: {}%", network.score(&y_hat,&y_train_data_array ));
     
 
-    let score = network.predict(&x_test_data_array, &y_test_data_array, &parameters);
+    let y_hat = network.predict(&x_test_data_array, &parameters);
 
-    println!("Test Set Accuracy: {}%", score);
+    println!("Test Set Accuracy: {}%", network.score(&y_hat,&y_test_data_array));
+
+
+    let img_array = load_image("cat.jpeg");
+    let prediction = network.predict(&img_array, &parameters);
+    println!("For First: {}", prediction.sum());
+
+
+    
+    let img_array = load_image("cat2.jpg");
+    let prediction = network.predict(&img_array, &parameters);
+    println!("For Second: {}", prediction.sum());
+
+
+    let img_array = load_image("dog.jpg");
+    let prediction = network.predict(&img_array, &parameters);
+    println!("For Third: {}", prediction.sum());
+
 }

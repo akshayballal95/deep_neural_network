@@ -4,6 +4,7 @@ use polars::{prelude::*, export::num::ToPrimitive};
 use serde_json::Value;
 use std::{collections::HashMap, f32::consts::E, fs::OpenOptions};
 use plotters::prelude::*;
+use image::{self, imageops::FilterType::Gaussian, Rgb32FImage};
 
 fn relu(z: f32) -> f32 {
     if z > 0.0 {
@@ -141,4 +142,13 @@ pub fn plot(data: Vec<f32>, iters: usize) {
         .unwrap();
 
     root.present().unwrap();
+}
+
+pub fn load_image(path: &str) -> Array2<f32>{
+
+    let img = image::open(path).unwrap();
+    let img_r = img.resize_exact(64, 64, Gaussian);
+    let img_array:Array2<f32> = Array2::from_shape_vec((12288,1), img_r.to_rgb32f().as_raw().to_vec()).unwrap();
+
+    img_array
 }

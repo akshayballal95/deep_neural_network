@@ -14,3 +14,4 @@ plotters = "0.3.4"
 serde_json = "1.0.91"
 serde = {version = "1.0.152", features = ["derive"]}
 serde_with = "2.2.0"
+image = "0.24.5"

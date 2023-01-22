@@ -1,12 +1,10 @@
 use ndarray::prelude::*;
 use polars::export::num::integer::Roots;
 use rand::distributions::Uniform;
-use rand::{prelude::Distribution};
+use rand::prelude::Distribution;
 use std::collections::HashMap;
 
-
 use crate::utils::*;
-
 
 trait Log {
     fn log(&self) -> Array2<f32>;
@@ -17,7 +15,6 @@ impl Log for Array2<f32> {
         self.map(|x| x.log(std::f32::consts::E))
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct LinearCache {
@@ -81,8 +78,6 @@ fn linear_backward_activation(
         Err("wrong activation".to_string())
     }
 }
-
-
 
 fn linear_forward_activation(
     a_prev: &Array2<f32>,
@@ -271,8 +266,7 @@ impl DeepNeuralNetwork {
         mut parameters: HashMap<String, Array2<f32>>,
         iterations: usize,
         learning_rate: f32,
-    )-> HashMap<String, Array2<f32>>{
-
+    ) -> HashMap<String, Array2<f32>> {
         let mut costs: Vec<f32> = vec![];
 
         for i in 0..iterations {
@@ -287,23 +281,23 @@ impl DeepNeuralNetwork {
             }
         }
 
-
         plot(costs, iterations);
 
         parameters
-
     }
 
     pub fn predict(
         &self,
         x_test_data: &Array2<f32>,
-        y_test_data: &Array2<f32>,
         parameters: &HashMap<String, Array2<f32>>,
-    ) -> f32 {
+    ) -> Array2<f32> {
         let (al, _) = self.l_model_forward(&x_test_data, &parameters);
 
         let y_hat = al.map(|x| (x > &0.5) as i32 as f32);
-        println!("{}", y_hat);
+        y_hat
+    }
+
+    pub fn score(&self, y_hat: &Array2<f32>, y_test_data: &Array2<f32>) -> f32 {
         let error =
             (y_hat - y_test_data).map(|x| x.abs()).sum() / y_test_data.shape()[1] as f32 * 100.0;
         100.0 - error
