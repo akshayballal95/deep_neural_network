@@ -1,21 +1,20 @@
 use std::{collections::HashMap, fs::OpenOptions};
 
-use deep_neural_network::{dnn::DeepNeuralNetwork, utils::*};
+use deep_neural_network::{dnn::{DeepNeuralNetwork, Parameters}, utils::*};
 use ndarray::{ Array2};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Parameter {
-    parameter: HashMap<String, Array2<f32>>,
-}
+
 
 
 fn main() {
     let layer_dims: Vec<usize> = vec![12288, 20, 7, 5, 1];
     let learning_rate: f32 = 0.0075;
+    let lambda: f32 = 0.05;
     let network = DeepNeuralNetwork {
         layer_dims,
         learning_rate,
+        lambda,
     };
    
     let (x_train_data, y_train_data) = load_data_as_dataframe("datasets/training_set.csv");
@@ -27,24 +26,22 @@ fn main() {
     let x_test_data_array = array_from_dataframe(&x_test_data) / 255.0;
     let y_test_data_array = array_from_dataframe(&y_test_data);
 
-    let parameters = network.initialize_parameters();
+    let parameters = Parameters::new(network.initialize_parameters());
 
-    let iterations: usize = 2500;
+    let iterations: usize = 1500;
 
     // let parameters = network.train_model(&x_train_data_array, &y_train_data_array, parameters, iterations, learning_rate);
 
-    // write_parameters_to_json_file(&parameters, "weights.json");
+    // write_parameters_to_json_file(&parameters.parameters, "weights.json");
 
-    let parameters = load_weights_from_json();
+    let parameters = Parameters::new(load_weights_from_json()); 
 
     
     let y_hat = network.predict(&x_train_data_array, &parameters);
-
     println!("Training Set Accuracy: {}%", network.score(&y_hat,&y_train_data_array ));
     
 
     let y_hat = network.predict(&x_test_data_array, &parameters);
-
     println!("Test Set Accuracy: {}%", network.score(&y_hat,&y_test_data_array));
 
 

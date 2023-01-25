@@ -2,9 +2,33 @@ use ndarray::prelude::*;
 use polars::export::num::integer::Roots;
 use rand::distributions::Uniform;
 use rand::prelude::Distribution;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 use crate::utils::*;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Parameters {
+    pub parameters: HashMap<String, Array2<f32>>,
+}
+
+impl Parameters{
+    pub fn new(parameters: HashMap<String, Array2<f32>>) -> Self{
+        Self { parameters }
+    }
+
+    pub fn frobenius_norm(&self, num_of_layers:usize)->f32{
+        let mut sum = 0.0;
+        for l in 1..num_of_layers{
+            let weight_string = ["W", &l.to_string()].join("").to_string();
+            sum =sum+ self.parameters[&weight_string].map(|x| x.abs().powf(2.0)).sum();
+        }
+        return sum
+
+    }
+
+}
+
 
 trait Log {
     fn log(&self) -> Array2<f32>;
@@ -32,6 +56,7 @@ pub struct ActivationCache {
 pub struct DeepNeuralNetwork {
     pub layer_dims: Vec<usize>,
     pub learning_rate: f32,
+    pub lambda: f32,
 }
 
 fn linear_forward(a: &Array2<f32>, w: &Array2<f32>, b: &Array2<f32>) -> (Array2<f32>, LinearCache) {
@@ -188,11 +213,12 @@ impl DeepNeuralNetwork {
         (al, caches)
     }
 
-    pub fn cost(&self, al: &Array2<f32>, y: &Array2<f32>) -> f32 {
+    pub fn cost(&self, al: &Array2<f32>, y: &Array2<f32>, parameters: &Parameters) -> f32 {
         let m = y.shape()[1] as f32;
+        let l2_penalty = (self.lambda/(2.0*m))* parameters.frobenius_norm(self.layer_dims.len());
         let cost = -(1.0 / m)
             * (y.dot(&al.clone().reversed_axes().log())
-                + (1.0 - y).dot(&(1.0 - al).reversed_axes().log()));
+                + (1.0 - y).dot(&(1.0 - al).reversed_axes().log())) + l2_penalty;
 
         return cost.sum();
     }
@@ -239,9 +265,11 @@ impl DeepNeuralNetwork {
 
     pub fn update_parameters(
         &self,
-        params: HashMap<String, Array2<f32>>,
+        params: &HashMap<String, Array2<f32>>,
         grads: HashMap<String, Array2<f32>>,
+        m: f32, 
         learning_rate: f32,
+
     ) -> HashMap<String, Array2<f32>> {
         let mut parameters = params.clone();
         let num_of_layers = self.layer_dims.len() - 1;
@@ -252,7 +280,7 @@ impl DeepNeuralNetwork {
             let bias_string = ["b", &l.to_string()].join("").to_string();
 
             *parameters.get_mut(&weight_string).unwrap() = parameters[&weight_string].clone()
-                - (learning_rate * grads[&weight_string_grad].clone());
+                - (learning_rate * (grads[&weight_string_grad].clone() + (self.lambda/m) *parameters[&weight_string].clone()) );
             *parameters.get_mut(&bias_string).unwrap() = parameters[&bias_string].clone()
                 - (learning_rate * grads[&bias_string_grad].clone());
         }
@@ -263,17 +291,19 @@ impl DeepNeuralNetwork {
         &self,
         x_train_data: &Array2<f32>,
         y_train_data: &Array2<f32>,
-        mut parameters: HashMap<String, Array2<f32>>,
+        mut parameters: Parameters,
         iterations: usize,
         learning_rate: f32,
-    ) -> HashMap<String, Array2<f32>> {
+    ) -> Parameters {
         let mut costs: Vec<f32> = vec![];
+        let m = y_train_data.shape()[1] as f32;
+
 
         for i in 0..iterations {
-            let (al, caches) = self.l_model_forward(&x_train_data, &parameters);
-            let cost = self.cost(&al, &y_train_data);
+            let (al, caches) = self.l_model_forward(&x_train_data, &parameters.parameters);
+            let cost = self.cost(&al, &y_train_data,&parameters);
             let grads = self.l_model_backward(&al, &y_train_data, caches);
-            parameters = self.update_parameters(parameters, grads.clone(), learning_rate);
+            parameters.parameters = self.update_parameters(&parameters.parameters, grads.clone(), m, learning_rate);
 
             if i % 100 == 0 {
                 costs.append(&mut vec![cost]);
@@ -289,9 +319,9 @@ impl DeepNeuralNetwork {
     pub fn predict(
         &self,
         x_test_data: &Array2<f32>,
-        parameters: &HashMap<String, Array2<f32>>,
+        parameters: &Parameters,
     ) -> Array2<f32> {
-        let (al, _) = self.l_model_forward(&x_test_data, &parameters);
+        let (al, _) = self.l_model_forward(&x_test_data, &parameters.parameters);
 
         let y_hat = al.map(|x| (x > &0.5) as i32 as f32);
         y_hat
