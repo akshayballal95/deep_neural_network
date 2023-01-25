@@ -38,18 +38,18 @@ fn main() {
     println!("Test Set Accuracy: {}%", network.score(&y_hat,&y_test_data_array));
 
 
-    let img_array = load_image("cat.jpeg");
+    let img_array = load_image("test/cat.jpeg");
     let prediction = network.predict(&img_array, &parameters);
     println!("For First: {}", prediction.sum());
 
 
     
-    let img_array = load_image("cat2.jpg");
+    let img_array = load_image("test/cat2.jpg");
     let prediction = network.predict(&img_array, &parameters);
     println!("For Second: {}", prediction.sum());
 
 
-    let img_array = load_image("dog.jpg");
+    let img_array = load_image("test/bird.jpeg");
     let prediction = network.predict(&img_array, &parameters);
     println!("For Third: {}", prediction.sum());
 
