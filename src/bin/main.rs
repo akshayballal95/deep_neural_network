@@ -27,7 +27,7 @@ fn main() {
 
     // write_parameters_to_json_file(&parameters.parameters, "weights.json");
 
-    let parameters = Parameters::new(load_weights_from_json()); 
+    let parameters = Parameters::new(load_weights_from_json("weights.json")); 
 
     
     let y_hat = network.predict(&x_train_data_array, &parameters);

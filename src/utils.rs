@@ -83,8 +83,8 @@ pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, 
 
 }
 
-pub fn load_weights_from_json() ->HashMap<String, Array2<f32>>  {
-    let text = std::fs::read_to_string("weights.json").unwrap();
+pub fn load_weights_from_json(path:&str) ->HashMap<String, Array2<f32>>  {
+    let text = std::fs::read_to_string(path).unwrap();
     let weights_json: serde_json::Value = serde_json::from_str(&text).unwrap();
     // println!("{}",weights_json["b4"]);
 
@@ -152,3 +152,5 @@ pub fn load_image(path: &str) -> Array2<f32>{
 
     img_array
 }
+
+
