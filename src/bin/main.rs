@@ -1,11 +1,4 @@
-use std::{collections::HashMap, fs::OpenOptions};
-
-use deep_neural_network::{dnn::{DeepNeuralNetwork, Parameters}, utils::*};
-use ndarray::{ Array2};
-use serde::{Deserialize, Serialize};
-
-
-
+use deep_neural_network::{dnn::{Parameters, DeepNeuralNetwork}, utils::*};
 
 fn main() {
     let layer_dims: Vec<usize> = vec![12288, 20, 7, 5, 1];
