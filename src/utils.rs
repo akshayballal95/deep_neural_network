@@ -2,7 +2,7 @@ use crate::dnn::ActivationCache;
 use ndarray::prelude::*;
 use polars::{prelude::*, export::num::ToPrimitive};
 use serde_json::Value;
-use std::{collections::HashMap, f32::consts::E, fs::OpenOptions};
+use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, path::PathBuf};
 use plotters::prelude::*;
 use image::{self, imageops::FilterType::Gaussian, Rgb32FImage};
 
@@ -83,10 +83,9 @@ pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, 
 
 }
 
-pub fn load_weights_from_json(path:&str) ->HashMap<String, Array2<f32>>  {
+pub fn load_weights_from_json(path:PathBuf) ->HashMap<String, Array2<f32>>  {
     let text = std::fs::read_to_string(path).unwrap();
     let weights_json: serde_json::Value = serde_json::from_str(&text).unwrap();
-    // println!("{}",weights_json["b4"]);
 
     let mut parameters: HashMap<String, Array2<f32>> = HashMap::new();
 
