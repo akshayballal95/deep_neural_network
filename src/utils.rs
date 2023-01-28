@@ -1,10 +1,9 @@
 use crate::dnn::ActivationCache;
 use ndarray::prelude::*;
 use polars::{prelude::*, export::num::ToPrimitive};
-use serde_json::Value;
 use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, path::PathBuf};
 use plotters::prelude::*;
-use image::{self, imageops::FilterType::Gaussian, Rgb32FImage};
+use image::{self, imageops::FilterType::Gaussian};
 
 fn relu(z: f32) -> f32 {
     if z > 0.0 {
@@ -52,7 +51,7 @@ pub fn relu_activation(z: Array2<f32>) -> (Array2<f32>, ActivationCache) {
 /**
 Loads data from a .csv file to a Polars DataFrame
 */
-pub fn load_data_as_dataframe(path: &str) -> (DataFrame, DataFrame) {
+pub fn load_data_as_dataframe(path: PathBuf) -> (DataFrame, DataFrame) {
     let data = CsvReader::from_path(path).unwrap().finish().unwrap();
 
     let x_train_data = data.drop("y").unwrap();
@@ -71,12 +70,12 @@ pub fn array_from_dataframe(dataframe: &DataFrame) -> Array2<f32> {
         .reversed_axes()
 }
 
-pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, filePath:&str){
+pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, file_path:&str){
     let file = OpenOptions::new()
     .create(true)
     .write(true)
     .truncate(true)
-    .open("weights.json")
+    .open(file_path)
     .unwrap();
 
     _ = serde_json::to_writer(file, parameters);
@@ -143,7 +142,7 @@ pub fn plot(data: Vec<f32>, iters: usize) {
     root.present().unwrap();
 }
 
-pub fn load_image(path: &str) -> Array2<f32>{
+pub fn load_image(path: PathBuf) -> Array2<f32>{
 
     let img = image::open(path).unwrap();
     let img_r = img.resize_exact(64, 64, Gaussian);

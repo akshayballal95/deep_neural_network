@@ -52,7 +52,7 @@ pub struct ActivationCache {
     pub z: Array2<f32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct DeepNeuralNetwork {
     pub layer_dims: Vec<usize>,
     pub learning_rate: f32,
@@ -75,7 +75,7 @@ fn linear_backward(
     dz: &Array2<f32>,
     linear_cache: LinearCache,
 ) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
-    let (a_prev, w, b) = (linear_cache.a, linear_cache.w, linear_cache.b);
+    let (a_prev, w, _b) = (linear_cache.a, linear_cache.w, linear_cache.b);
     let m = a_prev.shape()[1] as f32;
     let dw = (1.0 / m) * (dz.dot(&a_prev.reversed_axes()));
     let db_vec = ((1.0 / m) * dz.sum_axis(Axis(1))).to_vec();
