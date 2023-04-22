@@ -1,9 +1,12 @@
 use crate::dnn::ActivationCache;
-use ndarray::prelude::*;
-use polars::{prelude::*, export::num::ToPrimitive};
-use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, path::PathBuf};
-use plotters::prelude::*;
+use anyhow::{Context, Result, Error};
 use image::{self, imageops::FilterType::Gaussian};
+use ndarray::prelude::*;
+use plotters::prelude::*;
+use polars::{export::num::ToPrimitive, prelude::*};
+use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, io, path::PathBuf};
+
+use anyhow::anyhow;
 
 fn relu(z: f32) -> f32 {
     if z > 0.0 {
@@ -51,13 +54,17 @@ pub fn relu_activation(z: Array2<f32>) -> (Array2<f32>, ActivationCache) {
 /**
 Loads data from a .csv file to a Polars DataFrame
 */
-pub fn load_data_as_dataframe(path: PathBuf) -> (DataFrame, DataFrame) {
-    let data = CsvReader::from_path(path).unwrap().finish().unwrap();
-
+pub fn load_data_as_dataframe(path: &PathBuf) -> Result<(DataFrame, DataFrame)> {
+    let data = match CsvReader::from_path(path).unwrap().finish(){
+        Ok(data)=>data,
+    
+        Err(_)=>return Err(anyhow!("could not load data from file: '{}'",path.to_str().unwrap()))
+    
+    };
     let x_train_data = data.drop("y").unwrap();
     let y_train_data = data.select(["y"]).unwrap();
 
-    (x_train_data, y_train_data)
+    Ok((x_train_data, y_train_data))
 }
 
 /**
@@ -70,20 +77,27 @@ pub fn array_from_dataframe(dataframe: &DataFrame) -> Array2<f32> {
         .reversed_axes()
 }
 
-pub fn write_parameters_to_json_file(parameters: &HashMap<String, Array2<f32>>, file_path:&str){
+pub fn write_parameters_to_json_file(
+    parameters: &HashMap<String, Array2<f32>>,
+    file_path: PathBuf,
+) {
     let file = OpenOptions::new()
-    .create(true)
-    .write(true)
-    .truncate(true)
-    .open(file_path)
-    .unwrap();
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(file_path)
+        .unwrap();
 
     _ = serde_json::to_writer(file, parameters);
-
 }
 
-pub fn load_weights_from_json(path:PathBuf) ->HashMap<String, Array2<f32>>  {
-    let text = std::fs::read_to_string(path).unwrap();
+pub fn load_weights_from_json(path: &PathBuf) -> Result<HashMap<String, Array2<f32>>> {
+    let text =
+       match std::fs::read_to_string(path)
+       {
+        Ok(file)=>file,
+        Err(_)=> return Err(anyhow!(" model with file name: '{}' does not exist",path.to_str().unwrap()))
+       };
     let weights_json: serde_json::Value = serde_json::from_str(&text).unwrap();
 
     let mut parameters: HashMap<String, Array2<f32>> = HashMap::new();
@@ -95,20 +109,18 @@ pub fn load_weights_from_json(path:PathBuf) ->HashMap<String, Array2<f32>>  {
             .iter()
             .map(|x| x.as_i64().unwrap().to_usize().unwrap())
             .collect::<Vec<usize>>();
-        let data = val["data"].as_array()
-        .unwrap()
-        .iter()
-        .map(|x| x.as_f64().unwrap().to_f32().unwrap())
-        .collect::<Vec<f32>>();
+        let data = val["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_f64().unwrap().to_f32().unwrap())
+            .collect::<Vec<f32>>();
 
-        let matrix = Array2::from_shape_vec((dims[0],dims[1]), data).unwrap();
+        let matrix = Array2::from_shape_vec((dims[0], dims[1]), data).unwrap();
         parameters.insert(key.to_string(), matrix);
-
     }
-    parameters
+    Ok(parameters)
 }
-
-
 
 pub fn plot(data: Vec<f32>, iters: usize) {
     let root = BitMapBackend::new("0.png", (640, 480)).into_drawing_area();
@@ -142,13 +154,14 @@ pub fn plot(data: Vec<f32>, iters: usize) {
     root.present().unwrap();
 }
 
-pub fn load_image(path: PathBuf) -> Array2<f32>{
-
-    let img = image::open(path).unwrap();
+pub fn load_image(path: &PathBuf) -> Result<Array2<f32>> {
+    let img = match image::open(path){
+        Ok(img)=>img,
+        Err(_)=>{return Err(anyhow!("image with file name: '{}' does not exist",path.to_str().unwrap()))}
+    };
     let img_r = img.resize_exact(64, 64, Gaussian);
-    let img_array:Array2<f32> = Array2::from_shape_vec((12288,1), img_r.to_rgb32f().as_raw().to_vec()).unwrap();
+    let img_array: Array2<f32> =
+        Array2::from_shape_vec((12288, 1), img_r.to_rgb32f().as_raw().to_vec()).unwrap();
 
-    img_array
+    Ok(img_array)
 }
-
-

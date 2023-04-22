@@ -1,61 +1,17 @@
 use std::{
     fs::{File, OpenOptions},
     io::{self, BufRead, BufReader, Write},
-    path::PathBuf,
 };
 
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
+
 use deep_neural_network::{
+    args::{Cli, Task},
     dnn::{DeepNeuralNetwork, Parameters},
     utils::*,
 };
 
-#[derive(Subcommand, Debug)]
-pub enum Task {
-    /// Train the neural network
-    Train(TrainCommand),
-
-    /// Test the neural network on your image
-    Test(TestCommand),
-
-    /// Create a new network
-    Create,
-}
-
-#[derive(Args, Debug)]
-pub struct TestCommand {
-    /// Path to the image
-    pub path: PathBuf,
-}
-
-#[derive(Debug, Args)]
-pub struct TrainCommand {
-    /// Path to the training data
-    pub training_data_path: PathBuf,
-
-    /// Path to the test data
-    pub test_data_path: PathBuf,
-
-    /// Number of iterations
-    pub iterations: PathBuf,
-}
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about)]
-pub struct Cli {
-    #[clap(subcommand)]
-    pub task: Task,
-}
-
-fn main() {
-    // let layer_dims: Vec<usize> = vec![12288, 20, 7, 5, 1];
-    // let learning_rate: f32 = 0.0075;
-    // let lambda: f32 = 0.05;
-    // let network = DeepNeuralNetwork {
-    //     layer_dims,
-    //     learning_rate,
-    //     lambda,
-    // };
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let file = File::open("network.json").unwrap();
     let reader = BufReader::new(file);
@@ -65,8 +21,9 @@ fn main() {
 
     match args.task {
         Task::Train(train_command) => {
-            let (x_train_data, y_train_data) = load_data_as_dataframe(train_command.training_data_path);
-            let (x_test_data, y_test_data) = load_data_as_dataframe(train_command.test_data_path);
+            let (x_train_data, y_train_data) =
+                load_data_as_dataframe(&train_command.training_data_path)?;
+            let (x_test_data, y_test_data) = load_data_as_dataframe(&train_command.test_data_path)?;
 
             let x_train_data_array = array_from_dataframe(&x_train_data) / 255.0;
             let y_train_data_array = array_from_dataframe(&y_train_data);
@@ -76,7 +33,7 @@ fn main() {
 
             let parameters = Parameters::new(network.initialize_parameters());
 
-            let iterations: usize = 1500;
+            let iterations: usize = train_command.iterations;
 
             let parameters = network.train_model(
                 &x_train_data_array,
@@ -86,7 +43,7 @@ fn main() {
                 network.learning_rate,
             );
 
-            write_parameters_to_json_file(&parameters.parameters, "weights2.json");
+            write_parameters_to_json_file(&parameters.parameters, train_command.save_path);
 
             let y_hat = network.predict(&x_train_data_array, &parameters);
             println!(
@@ -99,21 +56,22 @@ fn main() {
                 "Test Set Accuracy: {}%",
                 network.score(&y_hat, &y_test_data_array)
             );
+
+            Ok(())
         }
 
         Task::Test(testcommand) => {
-            let parameters = Parameters::new(load_weights_from_json("weights.json".into()));
+            let weights = load_weights_from_json(&testcommand.model_path)?;
+            let parameters = Parameters::new(weights);
 
-            let img_array = load_image(testcommand.path.into());
+            let img_array = load_image(&testcommand.path.into())?;
             let prediction = network.predict(&img_array, &parameters);
             println!("Prediction {}", prediction.sum());
+
+            Ok(())
         }
 
         Task::Create => {
-            // let file = File::open("netw.json").unwrap();
-            // let reader = BufReader::new(file);
-            // let net:DeepNeuralNetwork = serde_json::from_reader(reader).unwrap();
-
             let mut layer_dims_string = String::new();
             print!("Enter Layer Dimensions : ");
             io::stdout().flush().unwrap();
@@ -157,7 +115,10 @@ fn main() {
                 .open("network.json")
                 .unwrap();
 
-            _ = serde_json::to_writer(file, &net)
+            _ = serde_json::to_writer(file, &net);
+
+            Ok(())
+
         }
     }
 }
