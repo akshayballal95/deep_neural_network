@@ -55,8 +55,8 @@ pub fn relu_activation(z: Array2<f32>) -> (Array2<f32>, ActivationCache) {
 Loads data from a .csv file to a Polars DataFrame
 */
 pub fn load_data_as_dataframe(path: &PathBuf) -> Result<(DataFrame, DataFrame)> {
-    let data = match CsvReader::from_path(path).unwrap().finish(){
-        Ok(data)=>data,
+    let data = match CsvReader::from_path(path){
+        Ok(data)=>data.finish().unwrap(),
     
         Err(_)=>return Err(anyhow!("could not load data from file: '{}'",path.to_str().unwrap()))
     
