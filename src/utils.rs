@@ -1,10 +1,10 @@
 use crate::dnn::ActivationCache;
-use anyhow::{Context, Result, Error};
+use anyhow::{Result};
 use image::{self, imageops::FilterType::Gaussian};
 use ndarray::prelude::*;
 use plotters::prelude::*;
 use polars::{export::num::ToPrimitive, prelude::*};
-use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, io, path::PathBuf};
+use std::{collections::HashMap, f32::consts::E, fs::OpenOptions, path::PathBuf};
 
 use anyhow::anyhow;
 
